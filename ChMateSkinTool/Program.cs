@@ -4,7 +4,6 @@ using SharpAdbClient;
 using System.IO;
 using System.Net;
 using System.Threading;
-using Microsoft.VisualBasic.CompilerServices;
 
 namespace ChMateSkinTool
 {
@@ -12,7 +11,7 @@ namespace ChMateSkinTool
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("ChMateSkinTool");
+            Console.WriteLine("ChMateSkinTool Rev.1");
             Console.WriteLine("あらかじめ端末とPCをUSB接続してください。");
 
             Console.WriteLine("PC側のChMateテーマのあるディレクトリを入力してください。\nそのディレクトリを監視して変更があれば転送します。");
@@ -28,7 +27,7 @@ namespace ChMateSkinTool
             ThemeDir = Console.ReadLine();
 
             // 最後にスラッシュがなかったら付け足す
-            if (!ThemeDir.EndsWith('/'))
+            if (!ThemeDir.EndsWith("/"))
             {
                 ThemeDir += '/';
             }
@@ -72,6 +71,7 @@ namespace ChMateSkinTool
                     Console.WriteLine("ひとつも端末が接続されていないか、なんらかのエラーです。\n" +
                         "USBデバッグを許可して、もう一度やり直してみてください。\n" +
                         "またUSBケーブルは充電用では通信できません。");
+                    Exit();
                     return;
                 }
             }
@@ -86,6 +86,7 @@ namespace ChMateSkinTool
             {
                 Console.WriteLine("監視先のディレクトリがおかしいです。\n" +
                     "存在し、かつ権限のあるディレクトリを指定してください。");
+                Exit();
                 return;
             }
             watcher.Filter = "";
@@ -101,12 +102,12 @@ namespace ChMateSkinTool
             catch (Exception)
             {
                 Console.WriteLine("監視の開始に失敗しました。なんかおかしいです……。");
+                Exit();
                 return;
             }
 
             Console.WriteLine("{0}ディレクトリの監視を開始しました。Enterを押すと終了します。", SkinDir);
 
-            Console.ReadLine();
             Exit();
 
         }
@@ -139,6 +140,7 @@ namespace ChMateSkinTool
                 {
                     Console.WriteLine("ファイルのコピーに失敗しました。なにかがおかしいです……。\n" +
                         "接続先と接続されているか、コピー先の権限は足りているかどうか確認してください。");
+                    Exit();
                     return;
                 }
             }
@@ -157,7 +159,7 @@ namespace ChMateSkinTool
 
         private static void Exit()
         {
-            
+            Console.ReadLine();
         }
 
         public static DeviceData Device { get; set; }
