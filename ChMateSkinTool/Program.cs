@@ -27,6 +27,7 @@ namespace ChMateSkinTool
             Console.Write("ディレクトリ:");
             ThemeDir = Console.ReadLine();
 
+            // 最後にスラッシュがなかったら付け足す
             if (!ThemeDir.EndsWith('/'))
             {
                 ThemeDir += '/';
@@ -62,20 +63,48 @@ namespace ChMateSkinTool
             }
             else
             {
-                Device = AdbClient.Instance.GetDevices().First();
+                if (inputID.Length != 0)
+                {
+                    Device = AdbClient.Instance.GetDevices().First();
+                }
+                else
+                {
+                    Console.WriteLine("ひとつも端末が接続されていないか、なんらかのエラーです。\n" +
+                        "USBデバッグを許可して、もう一度やり直してみてください。\n" +
+                        "またUSBケーブルは充電用では通信できません。");
+                    return;
+                }
             }
 
             Console.WriteLine("接続しました。");
             var watcher = new FileSystemWatcher();
-            watcher.Path = SkinDir;
+            try
+            {
+                watcher.Path = SkinDir;
+            }
+            catch (ArgumentException)
+            {
+                Console.WriteLine("監視先のディレクトリがおかしいです。\n" +
+                    "存在し、かつ権限のあるディレクトリを指定してください。");
+                return;
+            }
             watcher.Filter = "";
             watcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName;
             watcher.Changed += CopyTheme;
             watcher.Deleted += CopyTheme;
             watcher.Created += CopyTheme;
 
-            watcher.EnableRaisingEvents = true;
-            Console.WriteLine("{0}ディレクトリの監視を開始しました。", SkinDir);
+            try
+            {
+                watcher.EnableRaisingEvents = true;
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("監視の開始に失敗しました。なんかおかしいです……。");
+                return;
+            }
+
+            Console.WriteLine("{0}ディレクトリの監視を開始しました。Enterを押すと終了します。", SkinDir);
 
             Console.ReadLine();
             Exit();
@@ -84,23 +113,33 @@ namespace ChMateSkinTool
 
         private static void CopyTheme(object sender, FileSystemEventArgs e)
         {
-            Console.WriteLine("更新の検知:");
+            Console.WriteLine("更新を検知しました:");
             AdbClient.Instance.ExecuteRemoteCommand(string.Format("mkdir {0}", ThemeDir), Device, null);
 
+            // *.*で全部
             var files = new DirectoryInfo(SkinDir).GetFiles("*.*", SearchOption.AllDirectories);
 
             foreach (var file in files)
             {
-                using (var service = new SyncService(new AdbSocket(new IPEndPoint(IPAddress.Loopback, AdbClient.AdbServerPort)), Device))
+                try
                 {
-                    var path = file.FullName.Substring(SkinDir.Length + 1);
-                    var to = path.Replace('\\', '/');
-                    using (Stream stream = File.OpenRead(file.FullName))
+                    using (var service = new SyncService(new AdbSocket(new IPEndPoint(IPAddress.Loopback, AdbClient.AdbServerPort)), Device))
                     {
-                        service.Push(stream, ThemeDir + to, 444, DateTime.Now, null, CancellationToken.None); ;
+                        var path = file.FullName.Substring(SkinDir.Length + 1);
+                        var to = path.Replace('\\', '/');
+                        using (Stream stream = File.OpenRead(file.FullName))
+                        {
+                            service.Push(stream, ThemeDir + to, 444, DateTime.Now, null, CancellationToken.None); ;
 
-                        Console.WriteLine("コピーしました:{0} → {1}", path, ThemeDir + to);
+                            Console.WriteLine("コピーしました:{0} → {1}", path, ThemeDir + to);
+                        }
                     }
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine("ファイルのコピーに失敗しました。なにかがおかしいです……。\n" +
+                        "接続先と接続されているか、コピー先の権限は足りているかどうか確認してください。");
+                    return;
                 }
             }
 
@@ -110,7 +149,9 @@ namespace ChMateSkinTool
 
         private static void KillAndStartChMate()
         {
+            Console.WriteLine("ChMateの終了:");
             AdbClient.Instance.ExecuteRemoteCommand("am force-stop jp.co.airfront.android.a2chMate", Device, null);
+            Console.WriteLine("ChMateの開始:");
             AdbClient.Instance.ExecuteRemoteCommand("am start -n jp.co.airfront.android.a2chMate/jp.syoboi.a2chMate.activity.HomeActivity", Device, null);
         }
 
