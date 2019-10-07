@@ -4,6 +4,7 @@ using SharpAdbClient;
 using System.IO;
 using System.Net;
 using System.Threading;
+using System.Reflection;
 
 namespace ChMateSkinTool
 {
@@ -11,7 +12,7 @@ namespace ChMateSkinTool
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("ChMateSkinTool Rev.1");
+            Console.WriteLine("ChMateSkinTool Rev.2");
             Console.WriteLine("あらかじめ端末とPCをUSB接続してください。");
 
             Console.WriteLine("PC側のChMateテーマのあるディレクトリを入力してください。\nそのディレクトリを監視して変更があれば転送します。");
@@ -34,9 +35,18 @@ namespace ChMateSkinTool
 
             Console.WriteLine();
 
-            Console.WriteLine("platform-toolsのadb.exeのパスを入力してください。");
-            Console.Write("パス:");
-            var adbExe = Console.ReadLine();
+            //Console.WriteLine("platform-toolsのadb.exeのパスを入力してください。");
+            //Console.Write("パス:");
+            //var adbExe = Console.ReadLine();
+            var adbExe = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"platform-tools\adb.exe");
+
+            if(!File.Exists(adbExe))
+            {
+                Console.WriteLine("adb.exeが見つかりませんでした。\n" +
+                    "Rev.2からはplatform-toolsが付属しているので、ファイル構成を変えずに起動してください。");
+                Exit();
+                return;
+            }
 
             var server = new AdbServer();
             var result = server.StartServer(adbExe, false);
